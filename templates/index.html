@@ -3,9 +3,15 @@
 {% block content %}
 <h1>Airdraw Web Interface</h1>
 <video id="video" autoplay playsinline></video>
+<canvas id="canvas"></canvas>
 
     <script>
         const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
         navigator.mediaDevices.getUserMedia({
             video: true
@@ -16,24 +22,29 @@
         .catch(err => {
             console.error(err);
         });
+    
+    let smoothX = null;
+    let smoothY = null;
 
     async function sendFrame() {
-    const canvas = document.createElement("canvas");
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
 
-    const ctx = canvas.getContext("2d");
+    const tempCtx = tempCanvas.getContext("2d");
 
-    ctx.drawImage(
+    tempCtx.drawImage(
         video,
         0,
         0,
-        canvas.width,
-        canvas.height
+        tempCanvas.width,
+        tempCanvas.height
     );
 
-    const image = canvas.toDataURL("image/jpeg");
+const image = tempCanvas.toDataURL("image/jpeg");
+
+   
 
     const response = await fetch("/process", {
         method: "POST",
@@ -47,9 +58,27 @@
 
     const data = await response.json();
 
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+if (data.found) {
+
+    const x = data.x * (canvas.width / video.videoWidth);
+    const y = data.y * (canvas.height / video.videoHeight);
+    if (smoothX === null) {
+        smoothX = x;
+        smoothY = y;
+    } else {
+        smoothX = smoothX * 0.8 + x * 0.2;
+        smoothY = smoothY * 0.8 + y * 0.2;
+    }
+    ctx.beginPath();
+    ctx.arc(smoothX, smoothY, 10, 0, Math.PI * 2);
+    ctx.fill();
+    }
+
     console.log(data);
     }
 
-    setInterval(sendFrame, 1000);
+    setInterval(sendFrame, 100);
     </script>
 {% endblock %}
