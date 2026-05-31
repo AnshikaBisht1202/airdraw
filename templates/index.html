@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Airdraw Web Interface</h1>
+<video id="video" autoplay playsinline></video>
+
+    <script>
+        const video = document.getElementById("video");
+
+        navigator.mediaDevices.getUserMedia({
+            video: true
+        })
+        .then(stream => {
+            video.srcObject = stream;
+        })
+        .catch(err => {
+            console.error(err);
+        });
+
+    async function sendFrame() {
+    const canvas = document.createElement("canvas");
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+
+    ctx.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    const image = canvas.toDataURL("image/jpeg");
+
+    const response = await fetch("/process", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            image: image
+        })
+    });
+
+    const data = await response.json();
+
+    console.log(data);
+    }
+
+    setInterval(sendFrame, 1000);
+    </script>
+{% endblock %}
